@@ -164,9 +164,10 @@ class Play_Video_Avtivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Videos",
+                    text = videos.firstOrNull()?.folder ?: "Videos",
                     color = Color.White,
                     fontSize = 26.sp,
+                    maxLines = 1,
                     modifier = Modifier.padding(bottom = 12.dp, start = 10.dp, top = 5.dp)
                 )
                 Text(
@@ -389,5 +390,6 @@ class Play_Video_Avtivity : ComponentActivity() {
             }
         }
     }
+
 
 }
