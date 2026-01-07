@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">video playe</string>
+    <string name="title_activity_play_video_avtivity">Play_Video_Avtivity</string>
+    <string name="title_activity_video_player">VideoPlayerActivity</string>
+</resources>
