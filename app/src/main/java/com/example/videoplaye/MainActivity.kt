@@ -1,14 +1,17 @@
 package com.example.videoplaye
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.View
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -38,7 +41,6 @@ import androidx.mediarouter.app.MediaRouteButton
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
-
 
 
 data class VideoItem(
@@ -103,9 +105,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadVideos() {
-
         videoList.clear()
-
         val projection = arrayOf(
             MediaStore.Video.Media._ID,
             MediaStore.Video.Media.DISPLAY_NAME,
@@ -150,6 +150,11 @@ class MainActivity : AppCompatActivity() {
         Log.d("VIDEO_DEBUG", "final size = ${videoList.size}")
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadVideos()   // 🔥 refresh MediaStore data
+    }
+
 }
 
 @Composable
@@ -169,8 +174,10 @@ fun CastButton(modifier: Modifier = Modifier) {
                     androidx.appcompat.R.style.Theme_AppCompat_NoActionBar
                 )
                 MediaRouteButton(themedContext).apply {
-                    com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(ctx, this)
-                    // Optional: transparent background inside the circle
+                    com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(
+                        ctx,
+                        this
+                    )
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 }
             },
@@ -179,6 +186,18 @@ fun CastButton(modifier: Modifier = Modifier) {
     }
 }
 
+fun openScreenCastSettings(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_CAST_SETTINGS)
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(
+            context,
+            "Screen Cast not supported on this device",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
 
 
 fun android.content.Context.findActivity(): androidx.fragment.app.FragmentActivity? {
@@ -191,7 +210,6 @@ fun android.content.Context.findActivity(): androidx.fragment.app.FragmentActivi
     }
     return null
 }
-
 
 @Composable
 fun HomePage(videoList: List<VideoItem>) {
@@ -216,9 +234,14 @@ fun HomePage(videoList: List<VideoItem>) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Folder", color = Color.White, fontSize = 20.sp)
+//            TextButton(onClick = { openScreenCastSettings(context) })
+//            {
+//                Text("Cast Screen to TV")
+//            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CastButton()   // ✅ NOW SAFE
+                CastButton()
+                Spacer(modifier = Modifier.padding(start = 5.dp, end = 5.dp))
                 TextButton(onClick = { chengScreen = 1 }) {
                     Text("See All", color = Color(0xFFFF5722))
                 }
@@ -291,6 +314,7 @@ fun FolderCard(folderName: String, videoCount: Int, onClick: () -> Unit = {}) {
             )
         }
     }
+
 }
 
 
