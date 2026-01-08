@@ -36,7 +36,7 @@ import androidx.media3.ui.PlayerView  // Correct import (no ?)
 import androidx.media3.ui.AspectRatioFrameLayout  // For resizeMode
 
 
-@OptIn(UnstableApi::class)  // Add this at the top of your file or on the composable
+@OptIn(UnstableApi::class)
 class VideoPlayerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

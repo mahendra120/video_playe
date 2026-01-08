@@ -431,7 +431,8 @@ class Play_Video_Avtivity : ComponentActivity() {
                                         )
                                     },
                                     onClick = {
-//                                        shareVideo(this@Play_Video_Avtivity, videoUri)
+                                        shareMultipleVideos(this@Play_Video_Avtivity, selectedVideoIds)
+                                        expanded = false
                                     },
                                     enabled = selectedVideoIds.isNotEmpty()
                                 )
@@ -440,7 +441,6 @@ class Play_Video_Avtivity : ComponentActivity() {
                         }
                     }
                 }
-
             }
             LazyColumn {
                 items(videos) { video ->
@@ -489,7 +489,6 @@ class Play_Video_Avtivity : ComponentActivity() {
         val videoUri = ContentUris.withAppendedId(
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI, video.id
         )
-
         Card(
             onClick = onClick,
             modifier = Modifier
@@ -577,25 +576,37 @@ class Play_Video_Avtivity : ComponentActivity() {
                                         showMenu = false
                                     } else if (item.name == "Play Audio in Background") {
                                         val currentFolderVideos = folderVideos
+                                        val clickedVideoIndex = currentFolderVideos.indexOfFirst { it.id == video.id }
+
+                                        if (clickedVideoIndex == -1) {
+                                            Toast.makeText(context, "Video not found", Toast.LENGTH_SHORT).show()
+                                            showMenu = false
+                                            return@clickable
+                                        }
+
+                                        // Get videos starting from clicked position
+                                        val videosFromClicked = currentFolderVideos.subList(clickedVideoIndex, currentFolderVideos.size)
+
                                         val videoUris = ArrayList<String>()
                                         val videoTitles = ArrayList<String>()
-                                        val videoIds = LongArray(currentFolderVideos.size)
-                                        for ((index, video) in currentFolderVideos.withIndex()) {
+                                        val videoIds = LongArray(videosFromClicked.size)
+
+                                        for ((index, videoItem) in videosFromClicked.withIndex()) {
                                             val videoUri = ContentUris.withAppendedId(
                                                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                                                video.id
+                                                videoItem.id
                                             ).toString()
 
                                             videoUris.add(videoUri)
-                                            videoTitles.add(video.name)
-                                            videoIds[index] = video.id
+                                            videoTitles.add(videoItem.name)
+                                            videoIds[index] = videoItem.id
                                         }
 
                                         val serviceIntent = Intent(
                                             context,
                                             AudioBackgroundService::class.java
                                         ).apply {
-                                            // Send as playlist
+                                            // Send as playlist starting from clicked video
                                             putStringArrayListExtra(
                                                 AudioBackgroundService.EXTRA_PLAYLIST_URIS,
                                                 videoUris
@@ -621,7 +632,7 @@ class Play_Video_Avtivity : ComponentActivity() {
 
                                         Toast.makeText(
                                             context,
-                                            "Playing ${videoUris.size} videos in background",
+                                            "Playing ${videosFromClicked.size} videos in background",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                         showMenu = false
@@ -758,6 +769,30 @@ class Play_Video_Avtivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(context, "No app found to share video", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun shareMultipleVideos(context: Context, selectedIds: List<Long>) {
+
+        if (selectedIds.isEmpty()) return
+
+        val uris = ArrayList<Uri>()
+        selectedIds.forEach { id ->
+            uris.add(
+                ContentUris.withAppendedId(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    id
+                )
+            )
+        }
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "video/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, "Share videos via")
+        )
     }
 
     private fun requestMultipleVideosDeletion(selectedIds: List<Long>) {
