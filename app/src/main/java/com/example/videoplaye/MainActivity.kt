@@ -1,9 +1,12 @@
 package com.example.videoplaye
 
 import android.Manifest
+import android.app.Activity
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -18,6 +21,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,14 +41,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
+import androidx.media3.ui.PlayerNotificationManager
+import androidx.media3.ui.PlayerView
 import androidx.mediarouter.app.MediaRouteButton
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
+import com.example.videoplaye.AudioBackgroundService.Companion.CHANNEL_ID
+import com.example.videoplaye.AudioBackgroundService.Companion.NOTIFICATION_ID
 import com.google.android.gms.cast.CastMediaControlIntent
 
 
 data class VideoItem(
-    val id: Long, val name: String, val folder: String, val folderFullPath: String, // <-- full path
+    val id: Long, var name: String, val folder: String, val folderFullPath: String, // <-- full path
     val duration: Long
 )
 
@@ -152,7 +165,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadVideos()   // 🔥 refresh MediaStore data
+        loadVideos()
     }
 
 }
@@ -238,7 +251,6 @@ fun HomePage(videoList: List<VideoItem>) {
 //            {
 //                Text("Cast Screen to TV")
 //            }
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CastButton()
                 Spacer(modifier = Modifier.padding(start = 5.dp, end = 5.dp))
@@ -269,6 +281,7 @@ fun HomePage(videoList: List<VideoItem>) {
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun FolderCard(folderName: String, videoCount: Int, onClick: () -> Unit = {}) {
     Card(
@@ -307,13 +320,15 @@ fun FolderCard(folderName: String, videoCount: Int, onClick: () -> Unit = {}) {
                 text = folderName,
                 color = Color.White,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.basicMarquee()
             )
             Text(
                 text = "$videoCount Videos", color = Color.Gray, fontSize = 12.sp
             )
         }
     }
+
+
 
 }
 

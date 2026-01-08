@@ -60,19 +60,20 @@ dependencies {
 
     // compose icon
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-video:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-video:2.7.0")
 
     // exo player
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-ui:1.4.1")
-    implementation("androidx.media3:media3-common:1.4.0")
+    implementation("androidx.media3:media3-exoplayer:1.9.0")
+    implementation("androidx.media3:media3-ui:1.9.0")
+    implementation("androidx.media3:media3-common:1.9.0")
+    implementation("androidx.media3:media3-session:1.9.0")
 
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.mediarouter:mediarouter:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.mediarouter:mediarouter:1.8.1")
 
-    implementation("com.google.android.gms:play-services-cast:21.5.0")
-    implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
+    implementation("com.google.android.gms:play-services-cast:22.2.0")
+    implementation("com.google.android.gms:play-services-cast-framework:22.2.0")
 
 
 }
