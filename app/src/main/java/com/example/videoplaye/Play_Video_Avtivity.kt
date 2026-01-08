@@ -1,6 +1,7 @@
 package com.example.videoplaye
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.app.RecoverableSecurityException
 import android.content.ContentUris
@@ -36,7 +37,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.MoreVert
@@ -45,10 +49,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -69,7 +78,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,31 +100,53 @@ import coil.request.videoFrameMillis
 import com.example.videoplaye.AudioBackgroundService.Companion.ACTION_STOP
 import com.example.videoplaye.AudioBackgroundService.Companion.CHANNEL_ID
 import com.example.videoplaye.AudioBackgroundService.Companion.NOTIFICATION_ID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class Play_Video_Avtivity : ComponentActivity() {
 
     private val folderVideos = mutableStateListOf<VideoItem>()
     private var pendingDeleteVideo: VideoItem? = null
+    private var pendingDeleteIds = mutableListOf<Long>() // Add this
+
 
     var showdeletedioag by mutableStateOf(false)
 
+    var seleceteditms by mutableStateOf(true)
+
     private val deletePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-
+    )
+    { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            pendingDeleteVideo?.let {
-                folderVideos.remove(it)
-                Toast.makeText(this, "Video deleted", Toast.LENGTH_SHORT).show()
+            // Handle multiple deletions first
+            if (pendingDeleteIds.isNotEmpty()) {
+                val idsToRemove = pendingDeleteIds.toList()
+                val deletedCount = idsToRemove.size
+
+                // Remove from list
+                folderVideos.removeAll { video -> idsToRemove.contains(video.id) }
+
+                Toast.makeText(this, "$deletedCount videos deleted", Toast.LENGTH_SHORT).show()
+                pendingDeleteIds.clear()
+
+            } else {
+                // Handle single video deletion
+                pendingDeleteVideo?.let { video ->
+                    folderVideos.remove(video)
+                    Toast.makeText(this, "Video deleted", Toast.LENGTH_SHORT).show()
+                }
             }
         } else {
             Toast.makeText(this, "Delete cancelled", Toast.LENGTH_SHORT).show()
         }
 
         pendingDeleteVideo = null
+        pendingDeleteIds.clear()
     }
-
-
     var pendingRenameVideo: VideoItem? = null
     var pendingRenameName: String? = null
 
@@ -208,38 +241,218 @@ class Play_Video_Avtivity : ComponentActivity() {
 
     @Composable
     fun FolderVideoList(videos: List<VideoItem>) {
+        var expanded by remember { mutableStateOf(false) }
         val context = LocalContext.current
+        val selectedVideoIds = remember { mutableStateListOf<Long>() }
         Column(modifier = Modifier.padding(top = 36.dp, start = 10.dp, end = 10.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = videos.firstOrNull()?.folder ?: "Videos",
-                    color = Color.White,
-                    fontSize = 26.sp,
-                    maxLines = 1,
-                    modifier = Modifier.padding(bottom = 12.dp, start = 10.dp, top = 5.dp)
-                )
-                Text(
-                    "cancel",
-                    color = Color(0xFFFF5722),
-                    fontSize = 18.sp,
+
+                Box(
                     modifier = Modifier
-                        .padding(end = 20.dp)
-                        .clickable {
-                            if (context is android.app.Activity) {
-                                context.finish()
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (seleceteditms) {
+                                if (context is android.app.Activity) {
+                                    context.finish()
+                                }
                             }
-                        })
+                        },
+                        modifier = Modifier
+                            .padding(start = 10.dp)
+                            .align(Alignment.CenterStart)
+                            .size(24.dp)
+                    )
+                    {
+                        if (seleceteditms) {
+                            Icon(
+                                Icons.Default.ArrowBackIosNew,
+                                contentDescription = null,
+                                tint = Color(0xFFFF5722),
+                                modifier = Modifier.size(23.dp)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.clickable {
+                                    seleceteditms = true
+                                    selectedVideoIds.clear()
+                                }
+                            )
+                        }
+                    }
+                    if (seleceteditms) {
+                        Text(
+                            text = videos.firstOrNull()?.folder ?: "Videos",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .padding(start = 44.dp)
+                                .align(Alignment.CenterStart)
+                        )
+                    } else {
+                        Text(
+                            text = "${selectedVideoIds.size} Selected",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .padding(start = 44.dp)
+                                .align(Alignment.CenterStart)
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Box {
+                        Row {
+                            if (!seleceteditms) {
+                                IconButton(
+                                    onClick = {
+                                        if (selectedVideoIds.isNotEmpty()) {
+                                            // OPTION 1: Delete directly
+                                            requestMultipleVideosDeletion(selectedVideoIds)
+                                            selectedVideoIds.clear()
+                                            seleceteditms = true
+                                            // OPTION 2: Show confirmation dialog (recommended)
+                                            // showDeleteConfirmationDialog(selectedVideoIds)
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "No videos selected",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    },
+                                    enabled = selectedVideoIds.isNotEmpty()
+                                ) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete Selected",
+                                        tint = if (selectedVideoIds.isNotEmpty()) Color.Red else Color.Gray
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.padding(end = 5.dp))
+
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "Options",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            containerColor = Color(0, 0, 0),
+                            offset = DpOffset(x = (0).dp, y = (0).dp)
+                        ) {
+                            if (seleceteditms) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Select",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(end = 25.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        seleceteditms = false
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (selectedVideoIds.size == videos.size)
+                                                "Unselect All"
+                                            else
+                                                "Select All",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        if (selectedVideoIds.size == videos.size) {
+                                            selectedVideoIds.clear()
+                                        } else {
+                                            selectedVideoIds.clear()
+                                            selectedVideoIds.addAll(videos.map { it.id })
+                                        }
+                                    }
+                                )
+                                // Add this option to delete from dropdown too
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Delete Selected (${selectedVideoIds.size})",
+                                            color = if (selectedVideoIds.isNotEmpty()) Color.Red else Color.Gray,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        if (selectedVideoIds.isNotEmpty()) {
+                                            requestMultipleVideosDeletion(selectedVideoIds)
+                                            selectedVideoIds.clear()
+                                            seleceteditms = true
+                                        }
+                                    },
+                                    enabled = selectedVideoIds.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Share",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    onClick = {
+//                                        shareVideo(this@Play_Video_Avtivity, videoUri)
+                                    },
+                                    enabled = selectedVideoIds.isNotEmpty()
+                                )
+
+                            }
+                        }
+                    }
+                }
+
             }
             LazyColumn {
                 items(videos) { video ->
-                    VideoItemRow(video = video) {
-                        val intent = Intent(context, VideoPlayerActivity::class.java)
-                        intent.putExtra("videoId", video.id)
-                        context.startActivity(intent)
+                    VideoItemRow(
+                        video = video,
+                        selectedVideoIds = selectedVideoIds,
+                    ) {
+                        if (seleceteditms) {
+                            val intent = Intent(context, VideoPlayerActivity::class.java)
+                            intent.putExtra("videoId", video.id)
+                            context.startActivity(intent)
+                        } else return@VideoItemRow
                     }
                 }
             }
@@ -261,10 +474,11 @@ class Play_Video_Avtivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun VideoItemRow(
-        video: VideoItem, onClick: () -> Unit
+        video: VideoItem,
+        selectedVideoIds: MutableList<Long>,
+        onClick: () -> Unit
     ) {
         var showMenu by remember { mutableStateOf(false) }
-
         val context = LocalContext.current
         val videoImageLoader = remember {
             coil.ImageLoader.Builder(context).components {
@@ -298,9 +512,7 @@ class Play_Video_Avtivity : ComponentActivity() {
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
-
                 Spacer(modifier = Modifier.width(12.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = video.name,
@@ -313,13 +525,31 @@ class Play_Video_Avtivity : ComponentActivity() {
                         text = formatDuration(video.duration), color = Color.Gray, fontSize = 12.sp
                     )
                 }
-                IconButton(onClick = {
-                    showMenu = true
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = null,
-                        tint = Color.Gray
+                if (seleceteditms) {
+                    IconButton(onClick = {
+                        showMenu = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = Color.Gray
+                        )
+                    }
+                } else {
+                    Checkbox(
+                        checked = selectedVideoIds.contains(video.id),
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                selectedVideoIds.add(video.id)
+                            } else {
+                                selectedVideoIds.remove(video.id)
+                            }
+                        },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFFFF5722),
+                            uncheckedColor = Color.Gray,
+                            checkmarkColor = Color.White
+                        )
                     )
                 }
             }
@@ -335,28 +565,66 @@ class Play_Video_Avtivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 12.dp)
-                                .clickable {
+                                .clickable
+                                {
                                     if (item.name == "Rename") {
                                         showdeletedioag = true
                                     } else if (item.name == "Share") {
                                         shareVideo(context, videoUri)
+                                        showMenu = false
                                     } else if (item.name == "Delete") {
-                                        requestVideoDeletion(video)
+                                        requestMultipleVideosDeletion(listOf(video.id))
+                                        showMenu = false
                                     } else if (item.name == "Play Audio in Background") {
-                                        val serviceIntent = Intent(context, AudioBackgroundService::class.java).apply {
-                                            putExtra(AudioBackgroundService.EXTRA_VIDEO_URI, videoUri.toString())
-                                            putExtra(AudioBackgroundService.EXTRA_VIDEO_TITLE, video.name) // Add video title
+                                        val currentFolderVideos = folderVideos
+                                        val videoUris = ArrayList<String>()
+                                        val videoTitles = ArrayList<String>()
+                                        val videoIds = LongArray(currentFolderVideos.size)
+                                        for ((index, video) in currentFolderVideos.withIndex()) {
+                                            val videoUri = ContentUris.withAppendedId(
+                                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                                                video.id
+                                            ).toString()
+
+                                            videoUris.add(videoUri)
+                                            videoTitles.add(video.name)
+                                            videoIds[index] = video.id
                                         }
 
-                                        // For Android 8.0+ we need to start as foreground service
+                                        val serviceIntent = Intent(
+                                            context,
+                                            AudioBackgroundService::class.java
+                                        ).apply {
+                                            // Send as playlist
+                                            putStringArrayListExtra(
+                                                AudioBackgroundService.EXTRA_PLAYLIST_URIS,
+                                                videoUris
+                                            )
+                                            putStringArrayListExtra(
+                                                AudioBackgroundService.EXTRA_PLAYLIST_TITLES,
+                                                videoTitles
+                                            )
+                                            putExtra(
+                                                AudioBackgroundService.EXTRA_PLAYLIST_IDS,
+                                                videoIds
+                                            )
+                                        }
+
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                            ContextCompat.startForegroundService(context, serviceIntent)
+                                            ContextCompat.startForegroundService(
+                                                context,
+                                                serviceIntent
+                                            )
                                         } else {
                                             context.startService(serviceIntent)
                                         }
 
-                                        Toast.makeText(context, "Audio playing in background", Toast.LENGTH_SHORT).show()
-                                        showMenu = false  // Close menu
+                                        Toast.makeText(
+                                            context,
+                                            "Playing ${videoUris.size} videos in background",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        showMenu = false
                                     }
                                 }, verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -382,7 +650,6 @@ class Play_Video_Avtivity : ComponentActivity() {
                 mutableStateOf(video.name)
             }
             Dialog(onDismissRequest = { showdeletedioag = false }) {
-
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
@@ -446,7 +713,6 @@ class Play_Video_Avtivity : ComponentActivity() {
                                         )
                                     }
                                     showdeletedioag = false
-
                                 }, colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(
                                         0xFFFF5722
@@ -494,8 +760,22 @@ class Play_Video_Avtivity : ComponentActivity() {
         }
     }
 
+    private fun requestMultipleVideosDeletion(selectedIds: List<Long>) {
+        if (selectedIds.isEmpty()) {
+            Toast.makeText(this, "No videos selected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        for (videoId in selectedIds) {
+            val video = folderVideos.find { it.id == videoId }
+            if (video != null) {
+                requestSingleVideoDeletion(video)
+            }
+        }
 
-    private fun requestVideoDeletion(video: VideoItem) {
+        Toast.makeText(this, "Deleting ${selectedIds.size} videos...", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun requestSingleVideoDeletion(video: VideoItem) {
         val videoUri = ContentUris.withAppendedId(
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI, video.id
         )
@@ -504,11 +784,10 @@ class Play_Video_Avtivity : ComponentActivity() {
             val rowsDeleted = contentResolver.delete(videoUri, null, null)
             if (rowsDeleted > 0) {
                 folderVideos.remove(video)
-                Toast.makeText(this, "Video deleted", Toast.LENGTH_SHORT).show()
+                // Note: Toast will show for each video, might be spammy
                 return
             }
         } catch (e: SecurityException) {
-
             val intentSender = when {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
                     MediaStore.createDeleteRequest(

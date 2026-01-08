@@ -1,5 +1,6 @@
 package com.example.videoplaye
 
+import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.background
@@ -30,12 +31,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -63,14 +66,37 @@ fun All_Folders_show(videoList: SnapshotStateList<VideoItem>) {
                 videoList.groupBy { it.folder }
             }
         }
-        Column(modifier = Modifier.padding(36.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            )
-            {
-                Text("All Folders", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Column(modifier = Modifier.padding(top = 36.dp, start = 20.dp, end = 20.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = {
+                        if (context is Activity) context.finish()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 5.dp)
+                        .size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ArrowBackIosNew,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5722)
+                    )
+                }
+                Text(
+                    text = "All Folders",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
             }
+
 
             val validFolders = folderMap
                 .filterKeys { it.isNotBlank() }   // remove "" folders
@@ -80,7 +106,7 @@ fun All_Folders_show(videoList: SnapshotStateList<VideoItem>) {
                 columns = GridCells.Fixed(2),
             ) {
                 items(validFolders) { (folderName, videos) ->
-                if (folderName.isNotEmpty()) {
+                    if (folderName.isNotEmpty()) {
                         FolderCard_(
                             folderName = folderName,
                             videoCount = folderMap[folderName]?.size ?: 0,
@@ -164,7 +190,7 @@ fun FolderCard_(
 //            Spacer(modifier = Modifier.height(4.dp))
 
 
-            Log.d("numer", "FolderCard_:$videoCount" )
+            Log.d("numer", "FolderCard_:$videoCount")
         }
     }
 }

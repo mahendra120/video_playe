@@ -58,7 +58,7 @@ import com.google.android.gms.cast.CastMediaControlIntent
 
 data class VideoItem(
     val id: Long, var name: String, val folder: String, val folderFullPath: String, // <-- full path
-    val duration: Long
+    val duration: Long, val isPlayed: Boolean = false
 )
 
 var chengScreen by mutableStateOf(0)
@@ -199,18 +199,6 @@ fun CastButton(modifier: Modifier = Modifier) {
     }
 }
 
-fun openScreenCastSettings(context: Context) {
-    try {
-        val intent = Intent(Settings.ACTION_CAST_SETTINGS)
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        Toast.makeText(
-            context,
-            "Screen Cast not supported on this device",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-}
 
 
 fun android.content.Context.findActivity(): androidx.fragment.app.FragmentActivity? {
@@ -228,6 +216,9 @@ fun android.content.Context.findActivity(): androidx.fragment.app.FragmentActivi
 fun HomePage(videoList: List<VideoItem>) {
 
     val context = LocalContext.current
+
+    val newVideosCount = videoList.count { !it.isPlayed }
+
 
     val folderMap by remember {
         derivedStateOf {
@@ -281,9 +272,16 @@ fun HomePage(videoList: List<VideoItem>) {
     }
 }
 
+fun markVideoAsPlayed(context: Context, videoId: Long) {
+    val prefs = context.getSharedPreferences("played_videos", Context.MODE_PRIVATE)
+    prefs.edit().putBoolean(videoId.toString(), true).apply()
+}
+
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun FolderCard(folderName: String, videoCount: Int, onClick: () -> Unit = {}) {
+
     Card(
         onClick = onClick,
         modifier = Modifier
@@ -327,7 +325,6 @@ fun FolderCard(folderName: String, videoCount: Int, onClick: () -> Unit = {}) {
             )
         }
     }
-
 
 
 }

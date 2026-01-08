@@ -3,6 +3,7 @@
 package com.example.videoplaye
 
 import android.content.ContentUris
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -77,6 +78,7 @@ private fun VideoPlayerScreen(videoUri: Uri) {
         }
     }
 
+
     // Save position & playWhenReady on state changes
     LaunchedEffect(exoPlayer) {
         exoPlayer.addListener(object : Player.Listener {
@@ -99,6 +101,7 @@ private fun VideoPlayerScreen(videoUri: Uri) {
                     playWhenReady = exoPlayer.playWhenReady
                     exoPlayer.playWhenReady = false
                 }
+
                 Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
                 else -> Unit
             }
@@ -125,4 +128,5 @@ private fun VideoPlayerScreen(videoUri: Uri) {
             .fillMaxSize()
             .background(Color.Black)
     )
+
 }
